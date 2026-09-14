@@ -1,23 +1,26 @@
 # BaseDeDatos-U2-Ej13-RentACar
-Base de Datos - Unidad 2 - Ejercicio 14
+Base de Datos - Unidad 2 - Ejercicio 13
 
 Consigna
 
-Modelar una comunidad online de gastronomía: miembros aficionados y profesionales que publican recetas, recetas con su lista de ingredientes y cantidades, pasos de preparación ordenados, y reseñas con puntuación de otros miembros.
+Modelar la operación de una empresa internacional de alquiler de autos: sucursales en aeropuertos y centros urbanos, flota de vehículos asignados a una sucursal, clientes con licencia vigente, contratos de alquiler con retiro y devolución en sucursales posiblemente distintas, y siniestros ocurridos durante la vigencia del contrato.
 
 Lógica
 
-MIEMBRO 1:N RECETA. El enunciado es explícito: una receta es creada por un único autor. No hace falta N:M. Si más adelante se quisieran recetas colaborativas entre varios chefs, se agregaría una intermedia miembro-receta con el rol de cada uno.
+SUCURSAL 1:N VEHICULO. El enunciado dice que el vehículo está asignado a una sucursal "en un momento dado": es una relación 1:N con la sucursal actual, que se actualiza cuando la unidad se reubica. No es N:M: guardar el historial de ubicaciones sería otro requerimiento y exigiría una entidad de movimientos con fechas. Lo que sí queda registrado indirectamente es el recorrido entre sucursales, porque cada contrato guarda de dónde salió y a dónde volvió.
 
-Receta ↔ Ingrediente: N:M con receta-ingrediente. La cantidad es el caso de manual de atributo del vínculo: 200 gramos no es una propiedad de la harina ni de la receta, es la propiedad de esta harina en esta receta. La unidad_medida en cambio sí es del ingrediente, porque es su unidad estándar y no cambia entre recetas. Se agregó es_opcional para distinguir los ingredientes prescindibles sin duplicar la receta.
+Las dos sucursales del contrato son dos relaciones distintas, no una sola. Acá está el punto 3 del desarrollo: SUCURSAL participa dos veces en CONTRATO con roles diferentes — retira_en y devuelve_en — y cada una genera su propia FK (Id_Suc_Retiro e Id_Suc_Devolucion). Es el mismo mecanismo de roles que en una autorrelación, solo que acá los dos extremos son entidades distintas. Una sola relación no serviría: no se podría distinguir el origen del destino, y modelarlo como N:M sería incorrecto porque un contrato tiene exactamente una sucursal de cada tipo. El caso normal es que ambas coincidan, pero el modelo tiene que soportar el alquiler one-way.
 
-PASO como entidad débil de RECETA (composición secuencial). El "Paso 1" no significa nada fuera de su receta: el número se repite en todas. La PK es compuesta (codigo_receta + numero_paso) y la relación es identificatoria, por eso el círculo y el rombo doble. El orden de la secuencia no es un campo suelto sino parte de la identidad, que es justo lo que pide el punto 3: la numeración garantiza la secuencia y no puede haber dos pasos 3 en la misma receta.
+CONTRATO como entidad, no como relación N:M entre cliente y vehículo. Tiene identidad propia, atributos abundantes (fechas previstas y reales, importe) y se relaciona además con dos sucursales y con los siniestros. Convertirlo en un simple rombo dejaría sin lugar a los siniestros.
 
-RESENA: N:M entre MIEMBRO y RECETA. puntuacion, comentario y fecha_publicacion son atributos del acto de evaluar, no del miembro ni de la receta. Fijate que MIEMBRO se relaciona dos veces con RECETA por caminos distintos y no redundantes: como autor (crea) y como evaluador (escribe una reseña). Son dos vínculos con significados diferentes, por eso conviven sin pisarse.
+Devolución prevista y devolución real, separadas. Son dos atributos distintos porque la real puede no existir todavía (contrato en curso, queda en NULL) o diferir de la prevista, que es justamente lo que permite calcular recargos por demora.
 
-Restricciones de integridad a considerar: puntuacion entre 1 y 5 (CHECK); UNIQUE sobre (Id_Miembro, Id_Receta) si el negocio quiere una sola reseña por persona y receta; idealmente un CHECK que impida que el autor reseñe su propia receta; UNIQUE sobre (Id_Receta, Id_Ingrediente) para que no se cargue el mismo ingrediente dos veces; cantidad mayor a cero; y borrado en cascada de pasos e ingredientes al eliminar la receta, ya que sin ella no tienen sentido.
+SINIESTRO colgado del CONTRATO y no del VEHICULO. El contrato ya identifica al vehículo, al cliente y al período, así que colgando el siniestro del contrato queda determinado quién era el responsable al momento del incidente, que es el dato que el negocio necesita para cobrar la franquicia. Si colgara del vehículo habría que cruzar fechas contra los contratos para deducir el responsable. Contrapartida a tener en cuenta: los siniestros ocurridos fuera de un alquiler (maniobras en playa, traslados entre sucursales) no entrarían en este modelo; para cubrirlos habría que agregar una FK opcional al vehículo.
 
-Nota sobre el alcance. El contexto menciona clases virtuales en video, pero las reglas de negocio y el desarrollo requerido no las incluyen, así que no se modelaron. Si se pidieran, se agregaría una entidad CLASE dictada por un MIEMBRO con perfil Chef Profesional y una intermedia miembro-clase para las inscripciones.
+ASEGURADORA como entidad propia. Es un dato repetido entre muchos siniestros (nombre, contacto, póliza); dejarlo como texto dentro del siniestro duplicaría información y no permitiría consultar todos los casos de una aseguradora.
 
+Restricciones de integridad a considerar: un vehículo no puede tener dos contratos con períodos solapados; la licencia del cliente debe estar vigente a la fecha de retiro; la devolución real no puede ser anterior al retiro; y el kilometraje del vehículo solo debería aumentar al cerrar cada contrato.
+
+Resultado
 Resultado
 <img width="4650" height="2764" alt="BaseDeDatos-U2-Ej13-RentACar" src="https://github.com/user-attachments/assets/523b996f-85b5-4e8d-a62a-a832774433e4" />
